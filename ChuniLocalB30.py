@@ -71,11 +71,13 @@ top_30_play_ratings = [row[4] for row in sorted_matrix[:30]]
 average_play_rating = sum(top_30_play_ratings) / len(top_30_play_ratings)
 
 print("Top 30 play ratings in descending order:")
+print()
 for i, row in enumerate(sorted_matrix[:30]):
     name, lvl, score_max, play_rating, play_count = row[0], row[1], row[3], row[4], row[5]
     name = str(name)[2: -3]
     print(
         f"{i + 1}. Music name: {name}, Level {lvl}, Score Max: {score_max}, Play Rating: {play_rating}, Play Count: {play_count}")
+    print()
 
 print("Your B30 AVG is:", round(average_play_rating, 2))
 
