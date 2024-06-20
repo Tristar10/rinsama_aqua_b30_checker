@@ -1,3 +1,4 @@
+import json
 import sqlite3
 import math
 
@@ -19,12 +20,28 @@ def calc_play_rating(chart_const, score):
         return chart_const + -5 + (score - 900000) / (925000 - 900000) * 2
     elif score > 800000:
         return (chart_const - 5) / 2 + (score - 800000) / (900000 - 800000) * (
-                    (chart_const + -5) - (chart_const - 5) / 2)
+                (chart_const + -5) - (chart_const - 5) / 2)
     elif score > 500000:
         return 0 + (score - 500000) / (800000 - 500000) * (chart_const - 5) / 2
     else:
         return 0
 
+
+def find_difficulty_level(difficulty):
+    if difficulty == 0:
+        return "BAS"
+    elif difficulty == 1:
+        return "ADV"
+    elif difficulty == 2:
+        return "EXP"
+    elif difficulty == 3:
+        return "MAS"
+    else:
+        return "UNKNOWN"
+
+
+with open('lumin.json', encoding='utf-8') as f:
+    lumin_data = json.load(f)
 
 conn = sqlite3.connect('db.sqlite')
 cursor = conn.cursor()
@@ -43,26 +60,23 @@ for detail in user_music_details:
     music_levels = cursor.fetchall()
 
     rating_constant = None
-    for music_level in music_levels:
-        if level == music_level[2]:
-            rating_constant = float(str(music_level[0]) + '.' + str(music_level[1]))
-            break
-
     cursor.execute('''SELECT name FROM chusan_music WHERE music_id = ?''', (music_id,))
     music_name = cursor.fetchall()
-
-    if rating_constant is not None:
-        play_rating = calc_play_rating(rating_constant, score_max)
-        if rating_constant > math.floor(rating_constant) + 0.5:
-            chart_lvl = str(int(math.floor(rating_constant))) + '+'
-        else:
-            chart_lvl = str(int(math.floor(rating_constant)))
-        array.append([music_name[0], chart_lvl, rating_constant, score_max, round(play_rating, 2), play_count])
-
+    music_name = str(music_name)[3: -4]
+    if music_name != "":
+        difficulty = find_difficulty_level(level)
+        for song in lumin_data:
+            if song["meta"]["title"] == music_name:
+                rating_constant = float(song["data"][difficulty]["const"])
+                play_rating = calc_play_rating(rating_constant, score_max)
+                if rating_constant > math.floor(rating_constant) + 0.5:
+                    chart_lvl = str(int(math.floor(rating_constant))) + '+'
+                else:
+                    chart_lvl = str(int(math.floor(rating_constant)))
+                array.append([music_name, chart_lvl, rating_constant, score_max, round(play_rating, 2), play_count])
     else:
         not_found_count += 1
         array1.append([music_id, score_max])
-
 conn.close()
 
 sorted_matrix = sorted(array, key=lambda x: x[4], reverse=True)
@@ -71,13 +85,10 @@ top_30_play_ratings = [row[4] for row in sorted_matrix[:30]]
 average_play_rating = sum(top_30_play_ratings) / len(top_30_play_ratings)
 
 print("Top 30 play ratings in descending order:")
-print()
 for i, row in enumerate(sorted_matrix[:30]):
     name, lvl, score_max, play_rating, play_count = row[0], row[1], row[3], row[4], row[5]
-    name = str(name)[2: -3]
     print(
         f"{i + 1}. Music name: {name}, Level {lvl}, Score Max: {score_max}, Play Rating: {play_rating}, Play Count: {play_count}")
-    print()
 
 print("Your B30 AVG is:", round(average_play_rating, 2))
 
